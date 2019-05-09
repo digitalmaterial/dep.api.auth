@@ -48,6 +48,8 @@ final class AuthenticationService {
 	private final String amzDate = "x-amz-date:";
 	private final String hostAmzDate = "host;x-amz-date";
 	
+	private static final String NEW_LINE = "\n";
+	
 	public String generateSignature() {
 		String result = null;
 
@@ -151,9 +153,9 @@ final class AuthenticationService {
 		
 		for (String data : dataToSign) {
 			if (data != null) {
-				result += data + System.lineSeparator();
+				result += data + NEW_LINE;
 			} else {
-				result += System.lineSeparator();
+				result += NEW_LINE;
 			}
 		}
 
@@ -164,11 +166,11 @@ final class AuthenticationService {
 	
 	private String createSigningString() {
 		String result = algorithmSuit 
-				+ System.lineSeparator()
+				+ NEW_LINE
 				+ timestamp.format(timestampFormat)
-				+ System.lineSeparator()
+				+ NEW_LINE
 				+ createCredentialScope()
-				+ System.lineSeparator()
+				+ NEW_LINE
 				+ DigestUtils.sha256Hex(createSigningSubString().getBytes(StandardCharsets.UTF_8));
 		
 		return result;

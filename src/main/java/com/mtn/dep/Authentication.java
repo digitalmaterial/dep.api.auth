@@ -10,7 +10,7 @@ package com.mtn.dep;
  * 
  * @author Andrew Howes
  * @since 1.8
- * @version 1.0.0
+ * @version 1.1.0
  */
 public interface Authentication {
 
@@ -32,12 +32,11 @@ public interface Authentication {
 	String getJsonBody();
 	
 	/**
-	 * This method returns the request query as a string, alphabetically formatted by key. It is recommended to use this method if you
-	 * are passing a request query string to the DEPAuthentication builder. This will ensure that the
-	 * request query string being used in the final REST call is formatted in the same way as the request query string
-	 * being used when creating the authentication headers.
+	 * To retrieve the query parameters, make use of the "getQueryString(boolean shouldEncode)" method from the
+	 * QueryStringProcessor object.
 	 * 
-	 * @return The request query string as a string, alphabetically formatted by key.
+	 * @return The request query string as a string, alphabetically formatted by key (or value if the two keys are equal).
 	 */
+	@Deprecated
 	String getRequestQueryString();
 }

@@ -10,67 +10,247 @@ This project makes use of the lombok jar.
 ## Prerequisites
 
 To build you will need Git and JDK 8 or later.
-Ensure that you install Lombok for Eclipse when importing the project.
 
 ## Running the tests
 
 The tests can be located under "src/test/java".
-To run the tests, right click the "DEPAuthenticationTest.java" file and choose "Run As" -> "JUNIT TEST"
+To run the tests, right click the "com.mtn.dep.service" package and choose "Run As" -> "JUNIT TEST"
 
 ## Built With
 
 Maven - Dependency Management
 
-## Example:
+## Importing the jar
 
-The following code is a partial implementation, showing the important parts of how to use the classes:
-```java
-import java.time.ZonedDateTime;
+You can manually add the jar to your project by downloading the latest version under the "release" tab.
 
-import org.springframework.http.HttpHeaders;
+Alternatively you can make use of JitPack and create a dependency in your pom.xml file. To use this method you will need the following:
 
-import com.mtn.dep.Authentication;
-import com.mtn.dep.AuthenticationHeaders;
-import com.mtn.dep.service.DEPAuthentication;
-import com.mtn.dep.service.DEPValidationException;
-import com.mtn.dep.service.HttpMethod;
+##### JitPack Repository
 
-public class ExampleImplementation {
+Add the following to the pom file under the ``<repositories>`` section:
 
-	public static void main(String[] args) {
-		try {
-			Authentication depAuthentication = DEPAuthentication.builder()
-					.accessKey("exampleKey") // The provided access key
-					.accessSecret("exampleSecret") // The provided access secret
-					.requestPath("/examplePath") // e.g: /subscription
-					.httpMethod(HttpMethod.POST) // options: POST, PUT, DELETE, PATCH, GET
-					.body("<json-body-here>")
-					.timestamp(ZonedDateTime.now())
-					.hostName("host:api.dep.mtn.co.za") // The provided hostName
-					.build();
-			
-			AuthenticationHeaders authenticationHeaders = depAuthentication.createAuthenticationHeaders();
-			
-			HttpHeaders headers = new HttpHeaders();
-			
-			headers.add("Authorization", authenticationHeaders.getAuthorizationString());
-			headers.add("Accept", "application/vnd.sdp+json;version=1.4");
-			headers.add("Content-Type", "application/json");
-			headers.add("X-Amz-Date", authenticationHeaders.getXAmzDate());
-			headers.add("x-api-key", "<your x-api-key supplied by MTN>");
-			
-			//Use the "headers" object as part of the REST call.
-			
-			String jsonBody = depAuthentication.getJsonBody(); // Convenience method to get the orginal JSON text.
-			String queryString = depAuthentication.getRequestQueryString(); // Convenience method to return a query string alphabetically sorted by key.
-			
-			//Use the "jsonBody" and "queryString" as part of the REST call being made.
-			
-		} catch (DEPValidationException e) {
-			// Handle errors
-		}
-	}
-
-}
 ```
+<repository>
+    <id>jitpack.io</id>
+    <url>https://jitpack.io</url>
+</repository>
+```
+
+##### Dependency
+
+Now add the following dependency:
+
+```
+<dependency>
+    <groupId>com.github.digitalmaterial</groupId>
+    <artifactId>dep.api.auth</artifactId>
+    <version>(ADD_LATEST_VERSION_HERE)</version>
+</dependency>
+```
+
+Please see the official [JitPack website](https://jitpack.io/) for more information.
+
+## Examples:
+
+The following examples show how to implement authentication as part of your REST call:
+
+##### Example 1: A POST with a JSON body
+
+	import java.time.ZonedDateTime;
+
+	import com.mtn.dep.Authentication;
+	import com.mtn.dep.AuthenticationHeaders;
+	import com.mtn.dep.service.DEPAuthentication;
+	import com.mtn.dep.service.DEPValidationException;
+	import com.mtn.dep.service.HttpMethod;
+
+	public class ExampleImplementation {
 	
+		public static void main(String[] args) {
+			try {
+				Authentication depAuthentication = DEPAuthentication
+					.builder()
+						.accessKey("exampleKey") // The provided access key
+						.accessSecret("exampleSecret") // The provided access secret
+						.requestPath("/examplePath") // e.g: /subscription
+						.httpMethod(HttpMethod.POST) // options: POST, PUT, DELETE, PATCH, GET
+						.body("<json-body-here>")
+						.timestamp(ZonedDateTime.now())
+						.hostName("api.dep.mtn.co.za") // The provided hostName
+					.build();
+				
+				AuthenticationHeaders authenticationHeaders = depAuthentication.createAuthenticationHeaders();
+				
+				HttpHeaders headers = new HttpHeaders();
+				
+				headers.add("Authorization", authenticationHeaders.getAuthorizationString());
+				headers.add("Accept", "application/vnd.sdp+json;version=1.4");
+				headers.add("Content-Type", "application/json");
+				headers.add("X-Amz-Date", authenticationHeaders.getXAmzDate());
+				headers.add("x-api-key", "<your x-api-key supplied by MTN>");
+				
+				//Use the "headers" object as part of the REST call.
+				
+			} catch (DEPValidationException e) {
+				// Handle errors
+			}
+		}
+	
+	}
+	
+##### Example 2: A GET with a query string. This example uses an old (but still valid) implementation with regards to the query string. Note that this implementation does not support query parameters with duplicate keys. If duplicate keys are a requirement, please see example 3.
+
+	import java.time.ZonedDateTime;
+	
+	import java.util.TreeMap;
+
+	import com.mtn.dep.Authentication;
+	import com.mtn.dep.AuthenticationHeaders;
+	import com.mtn.dep.service.DEPAuthentication;
+	import com.mtn.dep.service.DEPValidationException;
+	import com.mtn.dep.service.HttpMethod;
+
+	public class ExampleImplementation {
+	
+		public static void main(String[] args) {
+			TreeMap<String, Object> queryString = new TreeMap<>();
+			
+			queryParameters.put("some_key", "some_value");
+			
+			try {
+				Authentication depAuthentication = DEPAuthentication
+					.builder()
+						.accessKey("exampleKey") // The provided access key
+						.accessSecret("exampleSecret") // The provided access secret
+						.requestPath("/examplePath") // e.g: /subscription
+						.httpMethod(HttpMethod.GET) // options: POST, PUT, DELETE, PATCH, GET
+						.timestamp(ZonedDateTime.now())
+						.hostName("api.dep.mtn.co.za") // The provided hostName
+						.queryString(queryString) // (Deprecated - Replaced with QueryStringProcessor)
+						.shouldURLEncode(true) // If false (default) the queryString will not automatically be encoded. The developer will be responsible for encoding the queryString provided. (Deprecated - Replaced with QueryStringProcessor)
+					.build();
+				
+				AuthenticationHeaders authenticationHeaders = depAuthentication.createAuthenticationHeaders();
+				
+				HttpHeaders headers = new HttpHeaders();
+				
+				headers.add("Authorization", authenticationHeaders.getAuthorizationString());
+				headers.add("Accept", "application/vnd.sdp+json;version=1.4");
+				headers.add("Content-Type", "application/json");
+				headers.add("X-Amz-Date", authenticationHeaders.getXAmzDate());
+				headers.add("x-api-key", "<your x-api-key supplied by MTN>");
+				
+				//Use the "headers" object as part of the REST call.
+				//Use the "queryString" as part of the REST call. Make sure not to double encode the query string.
+				
+			} catch (DEPValidationException e) {
+				// Handle errors
+			}
+		}
+	
+	}
+	
+##### Example 3: A GET with a query string. This example uses the new (recommended) way, making use of the QueryStringProcessor (Available since version 1.1.0). Note that the QueryStringProcessor supports duplicate keys, but not a scenario where there is a duplicate key/value pair.
+
+
+	import java.time.ZonedDateTime;
+
+	import com.mtn.dep.Authentication;
+	import com.mtn.dep.AuthenticationHeaders;
+	import com.mtn.dep.service.DEPAuthentication;
+	import com.mtn.dep.service.DEPValidationException;
+	import com.mtn.dep.service.HttpMethod;
+	import com.mtn.dep.service.QueryStringProcessor;
+
+	public class ExampleImplementation {
+	
+		public static void main(String[] args) {
+		
+			QueryStringProcessor processor = new QueryStringProcessor();
+		
+			processor.addQueryParameter("some_key", "some_value");
+			
+			try {
+				Authentication depAuthentication = DEPAuthentication
+					.builder()
+						.accessKey("exampleKey") // The provided access key
+						.accessSecret("exampleSecret") // The provided access secret
+						.requestPath("/examplePath") // e.g: /subscription
+						.httpMethod(HttpMethod.GET) // options: POST, PUT, DELETE, PATCH, GET
+						.timestamp(ZonedDateTime.now())
+						.hostName("api.dep.mtn.co.za") // The provided hostName
+						.queryStringProcessor(processor)
+					.build();
+				
+				AuthenticationHeaders authenticationHeaders = depAuthentication.createAuthenticationHeaders();
+				
+				HttpHeaders headers = new HttpHeaders();
+				
+				headers.add("Authorization", authenticationHeaders.getAuthorizationString());
+				headers.add("Accept", "application/vnd.sdp+json;version=1.4");
+				headers.add("Content-Type", "application/json");
+				headers.add("X-Amz-Date", authenticationHeaders.getXAmzDate());
+				headers.add("x-api-key", "<your x-api-key supplied by MTN>");
+				
+				//Use the "headers" object as part of the REST call.
+				//Retrieve the "queryString" from the QueryStringProcessor ("processor.getQueryString(false)") and use it as part of the REST call.
+				//The QueryStringProcessor contains methods to return a query string in different formats (Encoded/Unencoded and Sorted/Unsorted).
+				
+			} catch (DEPValidationException e) {
+				// Handle errors
+			}
+		}
+	
+	}
+	
+##### Example 4: How to use the QueryStringProcess class
+
+	import com.mtn.dep.service.QueryStringProcessor;
+
+	public class ExampleImplementation {
+	
+		public static void main(String[] args) {
+		
+			QueryStringProcessor processor = new QueryStringProcessor();
+			processor.addQueryParameter("b", "2");
+			processor.addQueryParameter("a", "1");
+			processor.addQueryParameter("c", "=");
+			
+			//Retrieve the values sorted and encrypted
+			String sortedEncrypted = processor.getQueryString(true);
+			// This will return the string: a=1&b=2&c=%3D
+			
+			//Retrieve the values sorted, but not encrypted
+			String sortedUnencrypted = processor.getQueryString(false);
+			// This will return the string: a=1&b=2&c==
+			
+			//Retrieve the values unsorted and encrypted
+			String unsortedEncrypted = processor.getUnsortedQueryString(true);
+			// This will return the string: b=2&a=1&c=%3D
+			
+			//Retrieve the values unsorted, but not encrypted
+			String unsortedUnencrypted = processor.getUnsortedQueryString(false);
+			// This will return the string: b=2&a=1&c==
+		}
+	
+	}
+	
+## Troubleshooting
+
+If you are having trouble implementing authentication successfully, consider the following:
+
+##### The query string is not being encoded (Old implementation)
+When passing the query string to the DEPAuthentication object ``without encoding it``, ensure that the ``shouldURLEncode`` parameter is set to ``true``. If you do not set this parameter, you are responsible for encoding the query string before passing it to the DEPAuthentication object. This is not needed if you make use of the QueryStringProcessor instead.
+
+##### The query string is being double encoded
+Ensure that the query string is not being double encoded when making the REST call. If you are relying on the Authentication library to do the encoding and you are making use of the convenience method ~~``getRequestQueryString``~~() provided by the DEPAuthentication class, the query string will already be encoded and should not be encoded again.
+
+##### Unreserved characters are being encoded
+If you decide encode the query string before passing it to the DEPAuthentication object, make sure not to encode any unreserved characters that [RFC 3986](http://tools.ietf.org/html/rfc3986) (``A-Z`` , ``a-z`` , ``0-9`` , ``-`` , ``_`` , ``.`` , ``~``) defines.
+
+##### All characters (besides unreserved characters) are not being percent-encoded
+Ensure that characters are percent-encoded and that all hexadecimal characters (A-F) are uppercase. Note that the space character must be encoded as ``%20`` and **NOT** ``+`` as some encoding schemes do.
+
+##### The hostName parameter are being prefixed with "host:" (Version 1.0.0 only)
+When passing in the host name, ensure that you prefix it with ``host:``. In ``version 1.0.0``, this will not be automatically added and authentication will fail if it is not added. From ``version 1.1.0`` it is not required anymore.

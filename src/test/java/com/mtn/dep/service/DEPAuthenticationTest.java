@@ -12,20 +12,23 @@ import java.util.TreeMap;
 import org.junit.Test;
 
 import com.mtn.dep.Authentication;
+import com.mtn.dep.AuthenticationHeaders;
 
 public class DEPAuthenticationTest {
 	
-	private final String hostName = "host:api.dep.mtn.co.za";
-	private final String result = "AWS4-HMAC-SHA256 Credential=TESTKEY/20181022/eu-west-1/execute-api/aws4_request, SignedHeaders=host;x-amz-date, Signature=b398ee70496cf3a43cc571431ea833090d58f20a0b1439109775d1e59c4106ca";	
-	private final ZonedDateTime timestamp = ZonedDateTime.of(LocalDate.of(2018, 10, 22), LocalTime.of(12, 59, 51, 428), ZoneId.of("UTC"));
+	private final String hostName = "api.dep.mtn.co.za";
 	private final String accessKey = "TESTKEY";
 	private final String accessSecret = "TESTSECRET";
+	
+	private final String result = "AWS4-HMAC-SHA256 Credential=TESTKEY/20181022/eu-west-1/execute-api/aws4_request, SignedHeaders=host;x-amz-date, Signature=b398ee70496cf3a43cc571431ea833090d58f20a0b1439109775d1e59c4106ca";	
+	private final ZonedDateTime timestamp = ZonedDateTime.of(LocalDate.of(2018, 10, 22), LocalTime.of(12, 59, 51, 428), ZoneId.of("UTC"));
+	
 
 	@Test
 	public void testThatAutorizationStringIsCorrectForDELETE() {
 		try {
 			Authentication auth = DEPAuthentication
-					.builder()
+				.builder()
 					.accessKey(accessKey)
 					.accessSecret(accessSecret)
 					.httpMethod(HttpMethod.DELETE)
@@ -58,7 +61,7 @@ public class DEPAuthenticationTest {
 		
 		try {
 			Authentication auth = DEPAuthentication
-					.builder()
+				.builder()
 					.accessKey(accessKey)
 					.accessSecret(accessSecret)
 					.httpMethod(HttpMethod.POST)
@@ -147,10 +150,10 @@ public class DEPAuthenticationTest {
 		map.put("a", 1);
 		map.put("t", "3");
 		map.put("d", 2L);
-		
+
 		try {
 			Authentication auth = DEPAuthentication
-					.builder()
+				.builder()
 					.accessKey(accessKey)
 					.accessSecret(accessSecret)
 					.httpMethod(HttpMethod.DELETE)
@@ -170,7 +173,7 @@ public class DEPAuthenticationTest {
 	public void testThatJsonBodyOrQueryStringMustBeProvidedIfHttpMethodIsPOST() {
 		try {
 			DEPAuthentication
-					.builder()
+				.builder()
 					.accessKey(accessKey)
 					.accessSecret(accessSecret)
 					.httpMethod(HttpMethod.POST)
@@ -190,7 +193,7 @@ public class DEPAuthenticationTest {
 	public void testThatJsonBodyOrQueryStringMustBeProvidedIfHttpMethodIsPUT() {
 		try {
 			DEPAuthentication
-					.builder()
+				.builder()
 					.accessKey(accessKey)
 					.accessSecret(accessSecret)
 					.httpMethod(HttpMethod.PUT)
@@ -210,7 +213,7 @@ public class DEPAuthenticationTest {
 	public void testThatJsonBodyOrQueryStringMustBeProvidedIfHttpMethodIsPATCH() {
 		try {
 			DEPAuthentication
-					.builder()
+				.builder()
 					.accessKey(accessKey)
 					.accessSecret(accessSecret)
 					.httpMethod(HttpMethod.PATCH)
@@ -224,5 +227,117 @@ public class DEPAuthenticationTest {
 			assertEquals("A JSON body or query string should be provided for HttpMethod types: POST, PUT, PATCH.", e.getMessage());
 		}
 						
+	}
+	
+	@Test
+	public void testThatURLEncodingIsAppliedToQueryString() {
+		TreeMap<String, Object> map = new TreeMap<>();
+		
+		map.put("(", ")");
+		map.put("=", ",");
+		map.put("a", "a");
+		map.put("A", 2L);
+
+		try {
+			Authentication auth = DEPAuthentication
+				.builder()
+					.accessKey(accessKey)
+					.accessSecret(accessSecret)
+					.httpMethod(HttpMethod.DELETE)
+					.requestPath("/subscription/50273440")
+					.timestamp(timestamp)
+					.queryString(map)
+					.shouldURLEncode(true)
+					.hostName(hostName)
+				.build();
+			
+			 assertEquals("%28=%29&%3D=%2C&A=2&a=a", auth.getRequestQueryString());
+		} catch (DEPValidationException e) {
+			fail("The DEPAuthentication object could not be built.");
+		}
+	}
+	
+	@Test
+	public void testThatURLEncodingIsNOTAppliedToQueryString() {
+		TreeMap<String, Object> map = new TreeMap<>();
+		
+		map.put("(", ")");
+		map.put("=", ",");
+		map.put("a", "a");
+		map.put("A", 2L);
+		
+		try {
+			Authentication auth = DEPAuthentication
+				.builder()
+					.accessKey(accessKey)
+					.accessSecret(accessSecret)
+					.httpMethod(HttpMethod.DELETE)
+					.requestPath("/subscription/50273440")
+					.timestamp(timestamp)
+					.queryString(map)
+					.hostName(hostName)
+				.build();
+			
+			 assertEquals("(=)&==,&A=2&a=a", auth.getRequestQueryString());
+		} catch (DEPValidationException e) {
+			fail("The DEPAuthentication object could not be built.");
+		}
+	}
+	
+	@Test
+	public void testThatACallWithQueryParametersSuccessfullyGenerateAuthHeader() {
+		QueryStringProcessor queryStringProcessor = new QueryStringProcessor();
+		
+		queryStringProcessor.addQueryParameter("expand", "subscription(status=2,page=1,svc_id=1)");
+
+		try {
+			Authentication auth = DEPAuthentication
+				.builder()
+					.accessKey(accessKey)
+					.accessSecret(accessSecret)
+					.httpMethod(HttpMethod.GET)
+					.requestPath("/service/1")
+					.timestamp(ZonedDateTime.of(LocalDate.of(2019, 04, 16), LocalTime.of(9, 10, 10, 123), ZoneId.of("UTC")))
+					.queryStringProcessor(queryStringProcessor)
+					.hostName(hostName)
+				.build();
+			
+			AuthenticationHeaders headers = auth.createAuthenticationHeaders();
+			
+			assertEquals("AWS4-HMAC-SHA256 Credential=TESTKEY/20190416/eu-west-1/execute-api/aws4_request, SignedHeaders=host;x-amz-date, Signature=5344a4e4d60b2a0c86fce8dea98ffb40e74cddbf69f3b5e47c5b094b8a284334", headers.getAuthorizationString());
+			assertEquals("20190416T091010Z", headers.getXAmzDate());
+			
+		} catch (DEPValidationException e) {
+			fail("The DEPAuthentication object could not be built.");
+		}
+	}
+	
+	@Test
+	public void testThatSortingIsCorrectWhenOneValueIsEncoded() {
+		QueryStringProcessor queryStringProcessor = new QueryStringProcessor();
+		
+		queryStringProcessor.addQueryParameter("A", "-");
+		queryStringProcessor.addQueryParameter("A", ":");
+
+		try {
+			Authentication auth = DEPAuthentication
+				.builder()
+					.accessKey(accessKey)
+					.accessSecret(accessSecret)
+					.httpMethod(HttpMethod.GET)
+					.requestPath("/service/1")
+					.timestamp(ZonedDateTime.of(LocalDate.of(2019, 04, 16), LocalTime.of(10, 3, 10, 123), ZoneId.of("UTC")))
+					.queryStringProcessor(queryStringProcessor)
+					.hostName(hostName)
+				.build();
+			
+			AuthenticationHeaders headers = auth.createAuthenticationHeaders();
+			
+			assertEquals("AWS4-HMAC-SHA256 Credential=TESTKEY/20190416/eu-west-1/execute-api/aws4_request, SignedHeaders=host;x-amz-date, Signature=5bab220e8024d65bb55f462f94d2e61d36655495f98b909a5aa7692e41b49d57", headers.getAuthorizationString());
+			assertEquals("20190416T100310Z", headers.getXAmzDate());
+			
+		} catch (DEPValidationException e) {
+			fail("The DEPAuthentication object could not be built.");
+		}
 	}
 }
